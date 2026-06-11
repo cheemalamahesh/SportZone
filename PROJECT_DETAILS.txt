@@ -1,0 +1,611 @@
+================================================================================
+                    SPORTZONE — E-COMMERCE WEBSITE
+                    COMPLETE PROJECT DOCUMENTATION
+================================================================================
+
+Project Name    : SportZone
+Type            : Sports E-Commerce Web Application
+Version         : 1.0
+Created         : May 2026
+Developer       : Built with HTML, CSS, and Vanilla JavaScript
+Description     : A fully functional, dynamic, single-page e-commerce website
+                  for buying sports equipment and gear across 6 sport categories.
+
+
+================================================================================
+                            TABLE OF CONTENTS
+================================================================================
+
+  1.  Project Overview
+  2.  Technology Stack
+  3.  Storage System
+  4.  Project Architecture
+  5.  File Structure
+  6.  Pages & Features
+  7.  Admin Panel
+  8.  Design System
+  9.  How the SPA (Single Page Application) Works
+  10. State Management & Data Flow
+  11. User Roles
+  12. Product Categories & Data
+  13. Workflow — How Everything Connects
+  14. Browser Compatibility
+  15. How to Run the Project
+  16. Admin Credentials
+  17. Key Limitations
+
+
+================================================================================
+  1. PROJECT OVERVIEW
+================================================================================
+
+SportZone is a premium sports e-commerce website built entirely on the frontend
+using only HTML, CSS, and JavaScript. It simulates a real-world e-commerce
+platform like Amazon or Flipkart for sports goods — with no backend server,
+no database, and no internet connection required after loading.
+
+The website behaves like a Single Page Application (SPA), meaning the page
+never fully reloads. Navigation happens by changing the URL hash (e.g. #/cart,
+#/catalog), and JavaScript dynamically renders the correct page content.
+
+Core Goal:
+  - Look and feel like a real e-commerce website
+  - Allow customers to browse, search, filter, add to cart, and checkout
+  - Allow an admin to manage all products (add, edit, delete)
+  - Persist all data between sessions using browser localStorage
+
+
+================================================================================
+  2. TECHNOLOGY STACK
+================================================================================
+
+FRONTEND ONLY — No backend, no server, no database required.
+
+  Language        : HTML5, CSS3, JavaScript (ES6+)
+  Styling         : Vanilla CSS (no frameworks like Tailwind or Bootstrap)
+  Scripting       : Vanilla JavaScript (no React, Angular, Vue, or jQuery)
+  Fonts           : Google Fonts — "Inter" (body) + "Bebas Neue" (headings)
+  Icons           : Unicode Emoji (no icon library needed)
+  Images          : Unsplash CDN URLs (free, no API key needed)
+  Storage         : Browser localStorage (built into every browser)
+  Routing         : Hash-based SPA routing (window.location.hash)
+  Build Tool      : None — plain files, open directly in browser
+  Package Manager : None — no npm, no node_modules
+  Dependencies    : Zero external JavaScript libraries
+
+  Summary: This project uses ZERO external dependencies. Everything runs
+  using technologies built into the web browser itself.
+
+
+================================================================================
+  3. STORAGE SYSTEM
+================================================================================
+
+Storage Type: Browser localStorage
+  - localStorage is a built-in browser feature
+  - It stores data as key-value pairs as text (JSON format)
+  - Data persists even after closing the browser tab or window
+  - Data is stored locally on the user's computer
+  - Nothing is sent over the internet
+
+Keys used in localStorage:
+
+  Key          : "sz_state"
+  Contains     : Cart items, wishlist products, logged-in user info,
+                 all orders, and any admin-modified products
+  Format       : JSON string (parsed into a JavaScript object)
+
+  Key          : "sz_users"
+  Contains     : All registered user accounts (name, email, password)
+  Format       : JSON array of user objects
+
+  Key          : "sz_theme"
+  Contains     : User's selected theme — either "dark" or "light"
+  Format       : Plain string
+
+Storage Capacity:
+  - localStorage supports up to ~5MB of data per domain
+  - More than sufficient for this application's needs
+
+Important Notes:
+  - Data is browser-specific (Chrome and Firefox have separate storage)
+  - Clearing browser data / cache will reset all app data
+  - Different devices will not share the same data
+  - Opening in a different browser on the same computer = fresh data
+
+
+================================================================================
+  4. PROJECT ARCHITECTURE
+================================================================================
+
+Architecture Type: Single Page Application (SPA) with Hash-Based Routing
+
+How it works:
+  1. The browser loads index.html ONCE
+  2. All JavaScript files are loaded at the start
+  3. When the user clicks a link (e.g. #/catalog), the URL hash changes
+  4. The Router detects the hash change via window.addEventListener('hashchange')
+  5. The Router calls the correct page renderer function
+  6. The page renderer writes HTML into the <main id="page-content"> element
+  7. The page appears to change without any actual page reload
+
+Pattern Used: Module Pattern
+  - Each major feature (Store, Router, Navbar, etc.) is wrapped in an
+    Immediately Invoked Function Expression (IIFE) and exposed as a global object
+  - Example: const Store = (() => { ... return { getCart, addToCart, ... }; })();
+
+Communication Between Modules:
+  - Event-driven using a custom pub/sub system (Store.on / Store.emit)
+  - When cart changes, Store emits 'cart:updated'
+  - Navbar listens and re-renders the cart badge automatically
+
+
+================================================================================
+  5. FILE STRUCTURE
+================================================================================
+
+E-Commerce/
+│
+├── index.html                  ← Single HTML shell (loaded once, never reloads)
+│
+├── css/
+│   ├── main.css                ← Design tokens, CSS variables, reset, typography,
+│   │                             layout utilities, animations, footer styles
+│   ├── components.css          ← Reusable UI components: buttons, cards, badges,
+│   │                             forms, modals, toasts, tabs, dropdowns, tables
+│   ├── pages.css               ← Page-specific styles: homepage hero, catalog
+│   │                             grid, product detail, cart, checkout, account
+│   └── admin.css               ← Admin panel layout, sidebar, stat cards,
+│                                 table cards, order status badges
+│
+├── js/
+│   ├── data.js                 ← All product seed data (16+ products), categories,
+│   │                             mock orders, promo codes, helper functions
+│   ├── store.js                ← Central state management (cart, wishlist, auth,
+│   │                             orders, products) — reads/writes localStorage
+│   ├── router.js               ← Hash-based SPA router, handles navigation
+│   ├── app.js                  ← App bootstrap, route registration, init
+│   │
+│   ├── components/
+│   │   ├── navbar.js           ← Sticky top navigation bar with cart badge,
+│   │   │                         user dropdown, theme toggle, mobile menu
+│   │   ├── auth.js             ← Sign In / Register modal popup
+│   │   ├── cart-drawer.js      ← Slide-out cart sidebar from the right
+│   │   ├── search.js           ← Live product search overlay
+│   │   └── toast.js            ← Notification toasts (success, error, info)
+│   │
+│   └── pages/
+│       ├── home.js             ← Homepage: hero banner, featured products,
+│       │                         category grid, promotions
+│       ├── catalog.js          ← Product listing with filters (category, price,
+│       │                         brand) and sort options
+│       ├── product.js          ← Product detail page: images, size/color picker,
+│       │                         add to cart, add to wishlist, reviews
+│       ├── cart.js             ← Cart page: item list, quantity controls,
+│       │                         price breakdown, promo code input
+│       ├── checkout.js         ← 3-step checkout: Address → Payment → Confirmation
+│       ├── wishlist.js         ← Saved wishlist page, move to cart
+│       ├── orders.js           ← Order history page for logged-in users
+│       ├── account.js          ← User profile, edit details, account settings
+│       └── admin.js            ← Admin panel: dashboard, product CRUD, orders
+
+
+================================================================================
+  6. PAGES & FEATURES
+================================================================================
+
+URL Route          Page Name         Key Features
+─────────────────────────────────────────────────────────────────────────────
+#/                 Homepage          Hero banner with CTA, featured products,
+                                     sport category grid, promotional banners,
+                                     best sellers section
+
+#/catalog          Product Catalog   Grid of all products, filter sidebar
+                                     (category, brand, price range), sort by
+                                     price / rating / name, live search results
+
+#/catalog?         Filtered Catalog  Same as catalog but pre-filtered by
+  category=X                         selected sport category
+
+#/product/:id      Product Detail    Full product page with image gallery,
+                                     size selector, color selector, quantity
+                                     picker, add to cart, add to wishlist,
+                                     product description, customer reviews
+
+#/cart             Shopping Cart     All cart items, quantity controls,
+                                     remove item, promo code input,
+                                     price summary, proceed to checkout
+
+#/checkout         Checkout          3-step flow:
+                                     Step 1: Delivery address form
+                                     Step 2: Payment (fake credit card form)
+                                     Step 3: Order confirmation with order ID
+
+#/wishlist         Wishlist          All saved products, move to cart,
+                                     remove from wishlist
+
+#/orders           Order History     Past orders list with status badges
+                                     (processing / shipped / delivered)
+
+#/account          User Account      Profile info, edit name/email,
+                                     account settings, recent orders
+
+#/admin            Admin Panel       Protected — admin only (see Section 7)
+
+
+================================================================================
+  7. ADMIN PANEL
+================================================================================
+
+Access: Requires admin login (see Section 16 for credentials)
+Route : #/admin
+
+Admin panel sections:
+
+  A. DASHBOARD
+     ─────────
+     - Total Revenue card (sum of all orders)
+     - Total Orders count
+     - Total Products count
+     - Low Stock Items alert (products with stock <= 5)
+     - Recent Orders table (latest 5 orders)
+
+  B. PRODUCTS MANAGEMENT
+     ────────────────────
+     - Table listing ALL products with image, category, brand, price, stock, rating
+     - Add New Product button → opens a modal form
+     - Edit button on each product → opens modal pre-filled with product data
+     - Delete button on each product → confirmation → removes from store
+
+     Add/Edit Product Form Fields:
+       * Product Name (required)
+       * Brand (required)
+       * Category — dropdown: football, basketball, tennis, fitness, swimming, cycling
+       * Price in ₹ (required)
+       * Original Price in ₹ (used to calculate and show discount %)
+       * Stock Quantity (required)
+       * Rating (0–5 stars)
+       * Reviews Count
+       * Image URL (required — paste any direct image URL)
+       * Description (text area)
+       * Sizes (comma separated — e.g. S, M, L, XL or 5, 6, 7)
+       * Colors (comma separated — e.g. Red, Blue, Black)
+       * Checkboxes: Featured Product, New Arrival, Best Seller
+
+     After saving, the product immediately appears on the website.
+     All changes are saved to localStorage and persist on refresh.
+
+  C. ORDERS MANAGEMENT
+     ──────────────────
+     - Full table of all customer orders
+     - Dropdown to change each order's status:
+         pending → processing → shipped → delivered → cancelled
+     - Save button to confirm the status change
+
+  D. CUSTOMERS
+     ─────────
+     - List of customers with name, email, order count, total spend, join date
+     (Mock data for demonstration)
+
+Protection:
+  - If a non-admin user visits #/admin, they see an "Access Denied" page
+  - The page shows admin credentials as a hint for demonstration purposes
+
+
+================================================================================
+  8. DESIGN SYSTEM
+================================================================================
+
+Theme: Dark mode by default, Light mode available via toggle button in navbar
+
+Color Palette:
+  Primary Orange   : #FF6B35  (buttons, links, accents, highlights)
+  Background Dark  : #0D1117  (main page background)
+  Surface Dark     : #161B22  (cards, navbar, sidebar)
+  Elevated Dark    : #1C2128  (inputs, hover states)
+  Text Primary     : #E6EDF3  (headings, body text)
+  Text Secondary   : #8B949E  (captions, labels, hints)
+  Success Green    : #3FB950  (in-stock, order delivered)
+  Error Red        : #F85149  (out of stock, errors)
+  Warning Amber    : #D29922  (low stock, pending)
+  Info Blue        : #58A6FF  (badges, links)
+
+Typography:
+  Headings  : "Bebas Neue" — condensed display font for impact
+  Body Text : "Inter"      — clean, readable sans-serif for all content
+  Both fonts are loaded from Google Fonts CDN
+
+Design Effects:
+  - Glassmorphism : Frosted glass effect on navbar (backdrop-filter: blur)
+  - Smooth transitions on all hover states
+  - Card hover lift (transform: translateY(-6px))
+  - Product image zoom on hover (transform: scale(1.07))
+  - Animated skeleton loaders for loading states
+  - Toast notifications slide in from the bottom-right
+  - Stagger animations on product grid (cards appear one by one)
+  - Orange glow on primary buttons (box-shadow with rgba)
+
+
+================================================================================
+  9. HOW THE SPA (SINGLE PAGE APPLICATION) WORKS
+================================================================================
+
+Traditional Website:
+  User clicks link → browser requests new HTML file from server → full page reload
+
+SportZone SPA:
+  User clicks link → URL hash changes (#/catalog) → JavaScript detects change
+  → Router calls catalog renderer → Catalog HTML is injected into the page
+  → No network request, no page reload, instant navigation
+
+The Router (router.js):
+  1. Registers routes: Router.register('catalog', renderCatalogPage)
+  2. Listens: window.addEventListener('hashchange', resolve)
+  3. Parses the URL hash to extract path and query parameters
+  4. Supports dynamic segments: 'product/:id' matches '#/product/5'
+  5. Calls the correct page renderer with extracted parameters
+  6. Scrolls to the top of the page on every navigation
+
+Page Rendering:
+  - Each page is a JavaScript function (e.g. renderHomePage)
+  - The function generates an HTML string using template literals
+  - It sets document.getElementById('page-content').innerHTML = html
+  - Event listeners are then attached to the newly created elements
+  - This approach is called "innerHTML rendering" — no virtual DOM needed
+
+
+================================================================================
+  10. STATE MANAGEMENT & DATA FLOW
+================================================================================
+
+Central Store (store.js):
+  All application state lives in a single object called "state" inside Store.
+  No component directly modifies state — everything goes through Store methods.
+
+State Object Structure:
+  state = {
+    cart:     [ { key, id, product, price, qty, size, color } ],
+    wishlist: [ { ...productObject } ],
+    user:     { name, email, role, avatar, joined } or null,
+    orders:   [ { id, date, status, total, items, itemCount, address } ],
+    products: [ ...productObjects ] or null (null = use seed data from data.js)
+  }
+
+How State Changes Work (Example: Add to Cart):
+  1. User clicks "Add to Cart" on a product page
+  2. renderProductPage() calls Store.addToCart(product, qty, size, color)
+  3. Store updates state.cart
+  4. Store calls localStorage.setItem('sz_state', JSON.stringify(state))
+  5. Store calls emit('cart:updated', state.cart)
+  6. Navbar listens via Store.on('cart:updated') and re-renders cart badge
+  7. CartDrawer opens and shows the updated cart
+
+Data Sources:
+  - PRODUCTS constant (data.js) = initial seed product data
+  - When admin edits products, state.products overrides the seed data
+  - If state.products is null, getProducts() returns seed data
+  - If state.products is an array, getProducts() returns that array
+
+
+================================================================================
+  11. USER ROLES
+================================================================================
+
+The app has 2 types of users:
+
+  A. Regular User (Customer)
+     ────────────────────────
+     How to create: Click "Sign In" → Register tab → fill form
+     Can do:
+       - Browse all products
+       - Search and filter
+       - Add to cart / wishlist
+       - Complete checkout (place orders)
+       - View order history
+       - Edit account profile
+
+  B. Admin User
+     ──────────
+     How to access: Use hardcoded admin credentials (see Section 16)
+     Can do everything a regular user can, PLUS:
+       - Access the Admin Panel (#/admin)
+       - Add new products to the store
+       - Edit existing product details
+       - Delete products
+       - View and update order statuses
+       - View customer list
+
+Role is stored in the user object: { role: 'admin' } or { role: 'user' }
+The admin account cannot be registered — it is hardcoded in store.js.
+
+
+================================================================================
+  12. PRODUCT CATEGORIES & DATA
+================================================================================
+
+Categories (6 total):
+  ⚽ Football   — balls, boots, goalkeeper gloves, shin guards, jerseys
+  🏀 Basketball — balls, shoes, hoops, jerseys
+  🎾 Tennis     — rackets, balls, bags, apparel
+  🏋️ Fitness    — dumbbells, yoga mats, resistance bands, knee guards, shoes
+  🏊 Swimming   — goggles, fins, swim caps, swimwear
+  🚴 Cycling    — bikes, helmets, gloves, water bottles, jerseys
+
+Products in Seed Data (data.js):
+  Each product has these fields:
+    id            — Unique identifier (number for seed, string for admin-added)
+    name          — Product name
+    brand         — Brand name (Nike, Adidas, Wilson, Rogue, Speedo, Trek, etc.)
+    category      — One of the 6 categories above
+    price         — Selling price in Indian Rupees (₹)
+    originalPrice — MRP / crossed-out price (for showing discount)
+    rating        — Star rating (0.0 to 5.0)
+    reviews       — Number of customer reviews
+    badge         — 'sale', 'new', 'hot', or null
+    image         — Unsplash CDN image URL
+    description   — Product description text
+    stock         — Number of units available
+    sizes         — Array of available sizes (e.g. ['S','M','L'] or ['5','6','7'])
+    colors        — Array of color options
+
+Currency: Indian Rupees (₹)
+Price Format: ₹2,999 (Indian locale formatting)
+
+
+================================================================================
+  13. WORKFLOW — HOW EVERYTHING CONNECTS
+================================================================================
+
+Startup Sequence:
+  1. Browser loads index.html
+  2. All 4 CSS files are applied (main, components, pages, admin)
+  3. All JavaScript files load in order:
+       data.js → store.js → router.js →
+       toast.js → search.js → auth.js → cart-drawer.js → navbar.js →
+       home.js → catalog.js → product.js → cart.js → checkout.js →
+       wishlist.js → orders.js → account.js → admin.js →
+       app.js (runs last, kicks everything off)
+  4. app.js registers all routes with Router
+  5. app.js initializes CartDrawer and Navbar
+  6. app.js calls Router.init() which reads the URL hash and renders the page
+  7. The footer is always visible at the bottom of index.html
+
+Customer Shopping Workflow:
+  Browse Homepage
+    → Click Category or View All
+    → Product Catalog (filter / sort / search)
+    → Click Product Card
+    → Product Detail Page
+    → Select size + color + quantity
+    → Click "Add to Cart"
+    → Cart Drawer slides open (or go to #/cart)
+    → Click Checkout
+    → Login required if not signed in
+    → Step 1: Fill delivery address
+    → Step 2: Enter (fake) payment details
+    → Step 3: Order confirmed, order ID generated
+    → Order appears in #/orders
+
+Admin Product Management Workflow:
+  Login as admin@sportzone.com / Admin@123
+    → Redirected to Admin Panel (#/admin)
+    → Click "Products" tab
+    → Click "+ Add Product"
+    → Fill product form (name, price, image URL, stock, etc.)
+    → Click "Add Product"
+    → Product saved to localStorage
+    → Product appears immediately in the storefront
+    → Customer can browse and buy it
+
+
+================================================================================
+  14. BROWSER COMPATIBILITY
+================================================================================
+
+Works on all modern browsers:
+  ✅ Google Chrome (recommended)
+  ✅ Mozilla Firefox
+  ✅ Microsoft Edge
+  ✅ Safari (macOS / iOS)
+  ✅ Opera
+
+Does NOT support:
+  ❌ Internet Explorer (IE) — uses modern ES6+ features not supported by IE
+
+Minimum Browser Requirements:
+  - Support for ES6 (arrow functions, template literals, const/let, spread)
+  - Support for localStorage
+  - Support for CSS custom properties (variables)
+  - Support for CSS Grid and Flexbox
+  - Support for backdrop-filter (for glassmorphism effect)
+
+
+================================================================================
+  15. HOW TO RUN THE PROJECT
+================================================================================
+
+Method 1 — Direct File Open (Simplest):
+  1. Open File Explorer
+  2. Navigate to: C:\Users\mahi5\Documents\E-Commerce\
+  3. Double-click index.html
+  4. The website opens in your default browser
+
+Method 2 — VS Code Live Server (Recommended for development):
+  1. Open the E-Commerce folder in Visual Studio Code
+  2. Install the "Live Server" extension (by Ritwick Dey)
+  3. Right-click index.html → "Open with Live Server"
+  4. Website opens at http://127.0.0.1:5500/
+
+Method 3 — VS Code Go Live Button:
+  1. Open index.html in VS Code
+  2. Click "Go Live" button at the bottom-right status bar
+
+No installation, no npm install, no build step needed.
+The website works completely offline after the initial load
+(only Google Fonts require an internet connection).
+
+
+================================================================================
+  16. ADMIN CREDENTIALS
+================================================================================
+
+  Admin Email    : admin@sportzone.com
+  Admin Password : Admin@123
+
+  These credentials are hardcoded in js/store.js and cannot be changed
+  through the website interface. They are intentionally visible in the
+  login modal as a hint for demonstration purposes.
+
+  To access admin panel after login: #/admin
+  Or click: User Avatar → 🛠️ Admin Panel (only visible to admins)
+
+
+================================================================================
+  17. KEY LIMITATIONS
+================================================================================
+
+Because this is a pure frontend project with no backend:
+
+  1. PAYMENT IS FAKE
+     The credit card form in checkout looks real but processes nothing.
+     No actual money is charged. It is for UI demonstration only.
+
+  2. DATA IS LOCAL
+     All data (cart, orders, products, users) is stored in your browser.
+     It does not sync to any server or cloud.
+     If you open the site on a different device, it will be empty.
+
+  3. PASSWORDS ARE STORED AS PLAIN TEXT
+     User passwords are stored as plain text in localStorage.
+     This is acceptable for a demo but NOT for a real production app.
+     A real app would hash passwords and store them server-side.
+
+  4. EMAILS ARE NOT SENT
+     Order confirmation emails, welcome emails — none are actually sent.
+     "Email sent" messages are simulated.
+
+  5. IMAGES ARE FROM UNSPLASH CDN
+     Product images require an internet connection to load.
+     If offline, images will show as broken / empty boxes.
+
+  6. NO REAL-TIME UPDATES
+     If two browser tabs are open, changes in one tab do not
+     automatically reflect in the other (until you refresh).
+
+  7. NO SEARCH ENGINE INDEXING
+     Since it is a file-based SPA, search engines (Google etc.)
+     cannot index this website's content.
+
+  8. SINGLE ADMIN
+     There is only one admin account and it cannot be created or
+     changed from the website interface.
+
+
+================================================================================
+                         END OF DOCUMENTATION
+================================================================================
+
+File    : PROJECT_DETAILS.txt
+Project : SportZone E-Commerce Website
+Path    : C:\Users\mahi5\Documents\E-Commerce\PROJECT_DETAILS.txt
+================================================================================
