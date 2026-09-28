@@ -1,0 +1,1025 @@
+================================================================================
+          SPORTZONE — JAVA FULL STACK BACKEND REQUIREMENTS
+              (Converting Frontend-Only to Full Stack)
+================================================================================
+
+Document   : JAVA_FULLSTACK_REQUIREMENTS.txt
+Project    : SportZone E-Commerce — Java Full Stack Version
+Frontend   : HTML + CSS + Vanilla JavaScript (already built)
+Backend    : Java (Spring Boot)
+Database   : MySQL / PostgreSQL
+Created    : July 2026
+
+
+================================================================================
+                          TABLE OF CONTENTS
+================================================================================
+
+  1.  What "Java Full Stack" Means
+  2.  Current Project vs Full Stack Version (Comparison)
+  3.  Backend Technology Stack
+  4.  Backend Architecture (Layers)
+  5.  Database Design (Tables & Relationships)
+  6.  REST API Endpoints Required
+  7.  Spring Boot Project Structure
+  8.  Security Requirements (Spring Security + JWT)
+  9.  Java Dependencies (pom.xml)
+  10. What Changes in the Frontend (JavaScript)
+  11. Admin Panel Backend Requirements
+  12. Payment Gateway Integration
+  13. Email Service Requirements
+  14. File / Image Upload Requirements
+  15. Development Tools Required
+  16. Deployment Requirements
+  17. Learning Path — Technologies to Learn
+  18. Summary Checklist
+
+
+================================================================================
+  1. WHAT "JAVA FULL STACK" MEANS
+================================================================================
+
+Full Stack = Frontend + Backend + Database all working together.
+
+Current Project (Frontend Only):
+  - HTML/CSS/JS runs in the browser
+  - Data stored in browser localStorage (temporary, local)
+  - No real security, no real payments, no real emails
+  - Cannot be accessed by multiple users on different devices
+
+Java Full Stack Project:
+  Frontend  → HTML + CSS + JavaScript (React or plain JS) running in browser
+  Backend   → Java Spring Boot REST API running on a server
+  Database  → MySQL or PostgreSQL storing data permanently
+  Server    → Tomcat (embedded in Spring Boot) serving the API
+
+How they communicate:
+  Browser (JS) ──HTTP Request──▶ Spring Boot API ──SQL Query──▶ MySQL Database
+  Browser (JS) ◀──JSON Response── Spring Boot API ◀──Result──── MySQL Database
+
+This means:
+  - Any user on any device can log in and see THEIR data
+  - Data is permanent (not lost when browser cache is cleared)
+  - Real payments can be processed
+  - Real emails can be sent
+  - Admin changes affect ALL users instantly
+  - Proper security with real passwords hashed (BCrypt)
+
+
+================================================================================
+  2. CURRENT PROJECT vs FULL STACK VERSION (COMPARISON)
+================================================================================
+
+  Feature              Current (Frontend Only)     Java Full Stack
+  ──────────────────────────────────────────────────────────────────────────────
+  Data Storage         Browser localStorage         MySQL / PostgreSQL database
+  User Accounts        Plain text in localStorage   Hashed passwords in database
+  Multiple Devices     ❌ Data only on one browser  ✅ Login from any device
+  Real Payments        ❌ Fake form                 ✅ Razorpay / Stripe gateway
+  Email Notifications  ❌ Not sent                  ✅ JavaMail / SendGrid
+  Product Images       Unsplash URLs                ✅ Upload to AWS S3 / server
+  Admin Changes        Local only                   ✅ Affects all users globally
+  Security             ❌ No real security           ✅ JWT tokens + Spring Security
+  Scalability          ❌ Single browser             ✅ Thousands of concurrent users
+  API                  ❌ None                       ✅ RESTful API (JSON)
+  Deployment           Open file in browser         Deploy on AWS / Heroku / VPS
+  Multiple Users       ❌ One browser = one user     ✅ Millions of users possible
+
+
+================================================================================
+  3. BACKEND TECHNOLOGY STACK
+================================================================================
+
+CORE BACKEND:
+  Language          : Java 17 or Java 21 (LTS versions recommended)
+  Framework         : Spring Boot 3.x
+  API Type          : REST API (JSON over HTTP)
+  Build Tool        : Maven (pom.xml) or Gradle (build.gradle)
+
+DATABASE:
+  Primary DB        : MySQL 8.x  OR  PostgreSQL 15.x
+  ORM               : Spring Data JPA + Hibernate (maps Java classes to DB tables)
+  Migration Tool    : Flyway or Liquibase (manages DB schema changes)
+
+SECURITY:
+  Authentication    : Spring Security + JWT (JSON Web Tokens)
+  Password Hashing  : BCrypt (never store plain text passwords)
+  Authorization     : Role-based access control (ROLE_USER, ROLE_ADMIN)
+
+ADDITIONAL SERVICES:
+  Email             : JavaMail API + Gmail SMTP  OR  SendGrid API
+  File Upload       : AWS S3  OR  local file storage (Multer equivalent in Java)
+  Payment           : Razorpay API  OR  Stripe API (India = Razorpay recommended)
+  Caching           : Redis (for sessions, cart, frequently accessed data)
+
+DEVELOPMENT AIDS:
+  API Testing       : Postman (test your API endpoints)
+  Documentation     : Springdoc OpenAPI (auto-generates Swagger UI)
+  Logging           : SLF4J + Logback (built into Spring Boot)
+  Validation        : Hibernate Validator / Jakarta Bean Validation
+
+
+================================================================================
+  4. BACKEND ARCHITECTURE (LAYERS)
+================================================================================
+
+Standard Layered Architecture (MVC Pattern) for Spring Boot:
+
+  ┌─────────────────────────────────────────────────┐
+  │             FRONTEND (Browser)                  │
+  │    HTML + CSS + JavaScript                      │
+  │    Makes HTTP calls (fetch/axios) to API        │
+  └────────────────────┬────────────────────────────┘
+                       │ HTTP Request (JSON)
+  ┌────────────────────▼────────────────────────────┐
+  │          CONTROLLER LAYER                       │
+  │  @RestController classes                        │
+  │  Receives HTTP requests, returns HTTP response  │
+  │  Examples: ProductController, UserController    │
+  └────────────────────┬────────────────────────────┘
+                       │ Calls service methods
+  ┌────────────────────▼────────────────────────────┐
+  │           SERVICE LAYER                         │
+  │  @Service classes                               │
+  │  Contains business logic                        │
+  │  Examples: ProductService, OrderService         │
+  └────────────────────┬────────────────────────────┘
+                       │ Calls repository methods
+  ┌────────────────────▼────────────────────────────┐
+  │         REPOSITORY LAYER                        │
+  │  @Repository / JpaRepository interfaces         │
+  │  Talks to the database using JPA/Hibernate      │
+  │  Examples: ProductRepository, UserRepository    │
+  └────────────────────┬────────────────────────────┘
+                       │ SQL Queries
+  ┌────────────────────▼────────────────────────────┐
+  │            DATABASE (MySQL)                     │
+  │  Tables: users, products, orders, cart, etc.    │
+  └─────────────────────────────────────────────────┘
+
+Additionally:
+  DTOs (Data Transfer Objects) — used between Controller and Service
+  Entity Classes — Java classes that map to database tables (@Entity)
+  Exception Handler — Global error handling (@ControllerAdvice)
+  Config Classes — Security config, CORS config, JWT config
+
+
+================================================================================
+  5. DATABASE DESIGN (TABLES & RELATIONSHIPS)
+================================================================================
+
+TABLE: users
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  name          VARCHAR(100)  NOT NULL
+  email         VARCHAR(150)  UNIQUE NOT NULL
+  password      VARCHAR(255)  NOT NULL  (BCrypt hashed)
+  role          ENUM          'USER', 'ADMIN'  DEFAULT 'USER'
+  phone         VARCHAR(15)
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  updated_at    TIMESTAMP
+  is_active     BOOLEAN       DEFAULT TRUE
+
+TABLE: categories
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  name          VARCHAR(50)   UNIQUE NOT NULL  (football, basketball, etc.)
+  display_name  VARCHAR(100)
+  icon          VARCHAR(10)   (emoji)
+  description   TEXT
+
+TABLE: products
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  name          VARCHAR(200)  NOT NULL
+  brand         VARCHAR(100)  NOT NULL
+  category_id   BIGINT        FOREIGN KEY → categories(id)
+  price         DECIMAL(10,2) NOT NULL
+  original_price DECIMAL(10,2)
+  discount      INT           (percentage)
+  description   TEXT
+  stock         INT           DEFAULT 0
+  rating        DECIMAL(2,1)  DEFAULT 0.0
+  review_count  INT           DEFAULT 0
+  image_url     VARCHAR(500)
+  is_featured   BOOLEAN       DEFAULT FALSE
+  is_new        BOOLEAN       DEFAULT FALSE
+  is_bestseller BOOLEAN       DEFAULT FALSE
+  is_active     BOOLEAN       DEFAULT TRUE
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  updated_at    TIMESTAMP
+
+TABLE: product_sizes
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  size_value    VARCHAR(20)   (S, M, L, XL, 5, 6, etc.)
+
+TABLE: product_colors
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  color_name    VARCHAR(50)   (Red, Blue, Black, etc.)
+  color_hex     VARCHAR(10)   (#FF0000)
+
+TABLE: product_images
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  image_url     VARCHAR(500)
+  is_primary    BOOLEAN       DEFAULT FALSE
+  sort_order    INT
+
+TABLE: cart_items
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  user_id       BIGINT        FOREIGN KEY → users(id)
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  quantity      INT           NOT NULL DEFAULT 1
+  size          VARCHAR(20)
+  color         VARCHAR(50)
+  added_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+
+TABLE: wishlist_items
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  user_id       BIGINT        FOREIGN KEY → users(id)
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  added_at      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+
+TABLE: addresses
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  user_id       BIGINT        FOREIGN KEY → users(id)
+  full_name     VARCHAR(100)
+  phone         VARCHAR(15)
+  address_line1 VARCHAR(255)
+  address_line2 VARCHAR(255)
+  city          VARCHAR(100)
+  state         VARCHAR(100)
+  pincode       VARCHAR(10)
+  is_default    BOOLEAN       DEFAULT FALSE
+
+TABLE: orders
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  order_number  VARCHAR(50)   UNIQUE  (e.g. ORD-1720000001)
+  user_id       BIGINT        FOREIGN KEY → users(id)
+  address_id    BIGINT        FOREIGN KEY → addresses(id)
+  total_amount  DECIMAL(10,2)
+  discount_amount DECIMAL(10,2) DEFAULT 0
+  final_amount  DECIMAL(10,2)
+  status        ENUM          'PENDING','PROCESSING','SHIPPED','DELIVERED','CANCELLED'
+  payment_status ENUM         'PENDING','PAID','FAILED','REFUNDED'
+  payment_id    VARCHAR(200)  (from Razorpay/Stripe)
+  promo_code    VARCHAR(50)
+  created_at    TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  updated_at    TIMESTAMP
+
+TABLE: order_items
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  order_id      BIGINT        FOREIGN KEY → orders(id)
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  product_name  VARCHAR(200)  (snapshot at time of order)
+  product_image VARCHAR(500)  (snapshot)
+  quantity      INT
+  size          VARCHAR(20)
+  color         VARCHAR(50)
+  unit_price    DECIMAL(10,2)
+  total_price   DECIMAL(10,2)
+
+TABLE: reviews
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  product_id    BIGINT        FOREIGN KEY → products(id)
+  user_id       BIGINT        FOREIGN KEY → users(id)
+  rating        INT           (1 to 5)
+  title         VARCHAR(200)
+  comment       TEXT
+  is_verified   BOOLEAN       DEFAULT FALSE  (purchased before reviewing)
+  created_at    TIMESTAMP
+
+TABLE: promo_codes
+  ──────────────────────────────────────────────────
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT
+  code          VARCHAR(50)   UNIQUE
+  discount_type ENUM          'PERCENTAGE', 'FLAT'
+  discount_value DECIMAL(5,2)
+  min_order_value DECIMAL(10,2)
+  max_uses      INT
+  used_count    INT           DEFAULT 0
+  valid_from    DATE
+  valid_until   DATE
+  is_active     BOOLEAN       DEFAULT TRUE
+
+Relationships Summary:
+  users ──── cart_items ──── products
+  users ──── wishlist_items ── products
+  users ──── orders ──── order_items ──── products
+  users ──── addresses
+  users ──── reviews ──── products
+  products ──── categories
+  products ──── product_sizes
+  products ──── product_colors
+  products ──── product_images
+
+
+================================================================================
+  6. REST API ENDPOINTS REQUIRED
+================================================================================
+
+BASE URL: http://localhost:8080/api
+
+────────────────────────────────────────────────
+  AUTH ENDPOINTS (No login required)
+────────────────────────────────────────────────
+  POST   /api/auth/register        Register new user
+  POST   /api/auth/login           Login → returns JWT token
+  POST   /api/auth/logout          Logout (invalidate token)
+  POST   /api/auth/refresh         Refresh expired JWT token
+  POST   /api/auth/forgot-password Send password reset email
+  POST   /api/auth/reset-password  Reset password with token
+
+────────────────────────────────────────────────
+  PRODUCT ENDPOINTS (Public — no login needed)
+────────────────────────────────────────────────
+  GET    /api/products             Get all products (with pagination, filters)
+  GET    /api/products/{id}        Get single product by ID
+  GET    /api/products/featured    Get featured products
+  GET    /api/products/search?q=   Search products by keyword
+  GET    /api/categories           Get all categories
+  GET    /api/categories/{id}/products  Get products by category
+
+  Query Parameters for /api/products:
+    ?category=football
+    ?brand=Nike
+    ?minPrice=100&maxPrice=5000
+    ?sortBy=price&order=asc
+    ?page=0&size=12
+    ?featured=true
+
+────────────────────────────────────────────────
+  CART ENDPOINTS (Login required)
+────────────────────────────────────────────────
+  GET    /api/cart                 Get current user's cart
+  POST   /api/cart/add             Add item to cart
+  PUT    /api/cart/{itemId}        Update item quantity
+  DELETE /api/cart/{itemId}        Remove item from cart
+  DELETE /api/cart/clear           Clear entire cart
+
+────────────────────────────────────────────────
+  WISHLIST ENDPOINTS (Login required)
+────────────────────────────────────────────────
+  GET    /api/wishlist             Get wishlist
+  POST   /api/wishlist/{productId} Add to wishlist
+  DELETE /api/wishlist/{productId} Remove from wishlist
+
+────────────────────────────────────────────────
+  ORDER ENDPOINTS (Login required)
+────────────────────────────────────────────────
+  POST   /api/orders               Place new order
+  GET    /api/orders               Get user's order history
+  GET    /api/orders/{orderId}     Get single order details
+  POST   /api/orders/{id}/cancel   Cancel an order
+
+────────────────────────────────────────────────
+  USER ENDPOINTS (Login required)
+────────────────────────────────────────────────
+  GET    /api/users/me             Get logged-in user profile
+  PUT    /api/users/me             Update profile
+  PUT    /api/users/me/password    Change password
+  GET    /api/users/me/addresses   Get saved addresses
+  POST   /api/users/me/addresses   Add new address
+  PUT    /api/users/me/addresses/{id}    Update address
+  DELETE /api/users/me/addresses/{id}   Delete address
+
+────────────────────────────────────────────────
+  REVIEW ENDPOINTS
+────────────────────────────────────────────────
+  GET    /api/products/{id}/reviews    Get reviews for product
+  POST   /api/products/{id}/reviews    Submit review (login required)
+  DELETE /api/reviews/{id}             Delete review (own or admin)
+
+────────────────────────────────────────────────
+  PAYMENT ENDPOINTS (Login required)
+────────────────────────────────────────────────
+  POST   /api/payment/create-order     Create Razorpay order
+  POST   /api/payment/verify           Verify payment after completion
+  POST   /api/payment/webhook          Razorpay webhook handler
+
+────────────────────────────────────────────────
+  ADMIN ENDPOINTS (ROLE_ADMIN required)
+────────────────────────────────────────────────
+  PRODUCTS:
+  POST   /api/admin/products           Add new product
+  PUT    /api/admin/products/{id}       Update product
+  DELETE /api/admin/products/{id}       Delete product
+  PATCH  /api/admin/products/{id}/stock Update stock
+
+  ORDERS:
+  GET    /api/admin/orders             Get all orders
+  PUT    /api/admin/orders/{id}/status Update order status
+
+  USERS:
+  GET    /api/admin/users              Get all users
+  PUT    /api/admin/users/{id}/role    Change user role
+  DELETE /api/admin/users/{id}         Deactivate user
+
+  DASHBOARD:
+  GET    /api/admin/dashboard/stats    Revenue, orders, users stats
+
+  CATEGORIES:
+  POST   /api/admin/categories         Add category
+  PUT    /api/admin/categories/{id}    Update category
+  DELETE /api/admin/categories/{id}    Delete category
+
+  PROMO CODES:
+  POST   /api/admin/promo-codes        Create promo code
+  GET    /api/admin/promo-codes        List all promo codes
+  DELETE /api/admin/promo-codes/{id}   Delete promo code
+
+  FILE UPLOAD:
+  POST   /api/admin/upload/image       Upload product image
+
+
+================================================================================
+  7. SPRING BOOT PROJECT STRUCTURE
+================================================================================
+
+sportzone-backend/
+│
+├── src/main/java/com/sportzone/
+│   │
+│   ├── SportzoneApplication.java        ← Main class (@SpringBootApplication)
+│   │
+│   ├── config/
+│   │   ├── SecurityConfig.java          ← Spring Security + JWT filter config
+│   │   ├── CorsConfig.java              ← Allow frontend to call API
+│   │   ├── JwtConfig.java               ← JWT secret key, expiry settings
+│   │   └── SwaggerConfig.java           ← API documentation config
+│   │
+│   ├── controller/
+│   │   ├── AuthController.java          ← /api/auth/*
+│   │   ├── ProductController.java       ← /api/products/*
+│   │   ├── CartController.java          ← /api/cart/*
+│   │   ├── WishlistController.java      ← /api/wishlist/*
+│   │   ├── OrderController.java         ← /api/orders/*
+│   │   ├── UserController.java          ← /api/users/*
+│   │   ├── ReviewController.java        ← /api/reviews/*
+│   │   ├── PaymentController.java       ← /api/payment/*
+│   │   └── AdminController.java         ← /api/admin/*
+│   │
+│   ├── service/
+│   │   ├── AuthService.java
+│   │   ├── ProductService.java
+│   │   ├── CartService.java
+│   │   ├── WishlistService.java
+│   │   ├── OrderService.java
+│   │   ├── UserService.java
+│   │   ├── ReviewService.java
+│   │   ├── PaymentService.java
+│   │   ├── EmailService.java
+│   │   ├── FileUploadService.java
+│   │   └── AdminService.java
+│   │
+│   ├── repository/
+│   │   ├── UserRepository.java          ← extends JpaRepository<User, Long>
+│   │   ├── ProductRepository.java
+│   │   ├── CategoryRepository.java
+│   │   ├── CartItemRepository.java
+│   │   ├── WishlistRepository.java
+│   │   ├── OrderRepository.java
+│   │   ├── OrderItemRepository.java
+│   │   ├── ReviewRepository.java
+│   │   ├── AddressRepository.java
+│   │   └── PromoCodeRepository.java
+│   │
+│   ├── entity/
+│   │   ├── User.java                    ← @Entity mapped to 'users' table
+│   │   ├── Product.java
+│   │   ├── Category.java
+│   │   ├── CartItem.java
+│   │   ├── WishlistItem.java
+│   │   ├── Order.java
+│   │   ├── OrderItem.java
+│   │   ├── Review.java
+│   │   ├── Address.java
+│   │   └── PromoCode.java
+│   │
+│   ├── dto/
+│   │   ├── request/
+│   │   │   ├── LoginRequest.java        ← { email, password }
+│   │   │   ├── RegisterRequest.java     ← { name, email, password }
+│   │   │   ├── ProductRequest.java      ← for add/update product
+│   │   │   ├── OrderRequest.java        ← { cartItems, addressId, promoCode }
+│   │   │   └── ReviewRequest.java
+│   │   └── response/
+│   │       ├── AuthResponse.java        ← { token, user }
+│   │       ├── ProductResponse.java
+│   │       ├── OrderResponse.java
+│   │       ├── CartResponse.java
+│   │       └── ApiResponse.java         ← { success, message, data }
+│   │
+│   ├── security/
+│   │   ├── JwtUtil.java                 ← Generate and validate JWT tokens
+│   │   ├── JwtAuthFilter.java           ← Intercepts requests, validates token
+│   │   └── UserDetailsServiceImpl.java  ← Loads user from DB for Spring Security
+│   │
+│   ├── exception/
+│   │   ├── GlobalExceptionHandler.java  ← @ControllerAdvice handles all errors
+│   │   ├── ResourceNotFoundException.java
+│   │   ├── UnauthorizedException.java
+│   │   └── BadRequestException.java
+│   │
+│   └── util/
+│       ├── OrderNumberGenerator.java    ← Generates ORD-XXXXXXXXXX
+│       └── PriceCalculator.java
+│
+├── src/main/resources/
+│   ├── application.properties           ← DB URL, JWT secret, email config
+│   ├── application-dev.properties       ← Development settings
+│   └── application-prod.properties      ← Production settings
+│
+└── pom.xml                              ← All Maven dependencies
+
+
+================================================================================
+  8. SECURITY REQUIREMENTS (SPRING SECURITY + JWT)
+================================================================================
+
+How Authentication Works in Full Stack:
+
+  1. User submits email + password to POST /api/auth/login
+  2. Spring Security loads user from database
+  3. BCrypt compares submitted password with hashed password in DB
+  4. If correct → JwtUtil generates a JWT token (signed with secret key)
+  5. Token returned to frontend: { token: "eyJhbG..." }
+  6. Frontend stores token in localStorage or httpOnly cookie
+  7. Every subsequent request sends token in header:
+       Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+  8. JwtAuthFilter intercepts every request, validates the token
+  9. If valid → request proceeds to controller
+  10. If invalid or expired → 401 Unauthorized response
+
+JWT Token Contents (Payload):
+  {
+    "sub": "user@email.com",       ← subject (email)
+    "userId": 42,
+    "role": "ROLE_USER",
+    "iat": 1720000000,             ← issued at (timestamp)
+    "exp": 1720086400              ← expires at (24 hours later)
+  }
+
+Security Rules:
+  PUBLIC  (no token needed):
+    GET /api/products/**
+    GET /api/categories/**
+    POST /api/auth/login
+    POST /api/auth/register
+
+  USER (valid token needed):
+    GET/POST/DELETE /api/cart/**
+    GET/POST/DELETE /api/wishlist/**
+    GET/POST /api/orders/**
+    GET/PUT /api/users/me/**
+
+  ADMIN ONLY (token with ROLE_ADMIN):
+    ALL /api/admin/**
+
+Password Security:
+  - Passwords are NEVER stored as plain text
+  - BCrypt hashing used (automatically adds salt)
+  - Example: "Admin@123" → "$2a$12$xyzABC..." (stored in DB)
+
+
+================================================================================
+  9. JAVA DEPENDENCIES (pom.xml)
+================================================================================
+
+Required Maven Dependencies:
+
+  <!-- Spring Boot Core -->
+  spring-boot-starter-web              ← REST API (Tomcat + Jackson)
+  spring-boot-starter-data-jpa         ← JPA/Hibernate ORM
+  spring-boot-starter-security         ← Spring Security
+  spring-boot-starter-validation       ← Bean Validation (@NotNull, @Email etc)
+  spring-boot-starter-mail             ← Email sending
+  spring-boot-devtools                 ← Hot reload in development
+
+  <!-- Database -->
+  mysql-connector-j                    ← MySQL driver
+  (or postgresql for PostgreSQL)
+  flyway-core                          ← Database migration
+
+  <!-- JWT -->
+  jjwt-api                             ← JWT library (io.jsonwebtoken)
+  jjwt-impl
+  jjwt-jackson
+
+  <!-- API Documentation -->
+  springdoc-openapi-starter-webmvc-ui  ← Swagger UI at /swagger-ui.html
+
+  <!-- File Upload (AWS S3) -->
+  aws-java-sdk-s3                      ← Amazon S3 SDK (if using S3)
+
+  <!-- Payment (Razorpay) -->
+  razorpay-java                        ← Razorpay official Java SDK
+
+  <!-- Utilities -->
+  lombok                               ← @Getter @Setter @Builder etc.
+  modelmapper                          ← Convert Entity ↔ DTO
+
+application.properties settings needed:
+  spring.datasource.url=jdbc:mysql://localhost:3306/sportzone_db
+  spring.datasource.username=root
+  spring.datasource.password=yourpassword
+  spring.jpa.hibernate.ddl-auto=validate
+  spring.jpa.show-sql=true
+  jwt.secret=your-super-secret-key-here
+  jwt.expiration=86400000
+  spring.mail.host=smtp.gmail.com
+  spring.mail.port=587
+  spring.mail.username=your@gmail.com
+  spring.mail.password=your-app-password
+  razorpay.key.id=rzp_test_xxx
+  razorpay.key.secret=xxx
+
+
+================================================================================
+  10. WHAT CHANGES IN THE FRONTEND (JAVASCRIPT)
+================================================================================
+
+The HTML and CSS stay THE SAME.
+Only JavaScript needs to change — instead of localStorage, it calls the API.
+
+Example — Current Code (localStorage):
+  // store.js
+  function addToCart(product, qty) {
+    state.cart.push({ product, qty });
+    localStorage.setItem('sz_state', JSON.stringify(state));
+  }
+
+Example — New Code (API call):
+  // api.js (new file)
+  async function addToCart(productId, qty, size, color) {
+    const response = await fetch('http://localhost:8080/api/cart/add', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + getToken()   ← JWT token
+      },
+      body: JSON.stringify({ productId, qty, size, color })
+    });
+    return await response.json();
+  }
+
+Changes required in JavaScript:
+  1. Add a new api.js file with fetch() calls for every feature
+  2. Store JWT token in localStorage after login
+  3. Send token in Authorization header on every request
+  4. Handle 401 responses (redirect to login)
+  5. Remove all direct localStorage reads for cart/orders/wishlist
+  6. Add loading states for API calls (they take time, unlike localStorage)
+  7. Add error handling for network failures
+
+Alternatively: Replace plain JS with React.js for better API handling.
+  React would use Axios library for HTTP calls and Redux/Context for state.
+
+
+================================================================================
+  11. ADMIN PANEL BACKEND REQUIREMENTS
+================================================================================
+
+The admin panel already exists on the frontend.
+The backend needs to support these admin-specific features:
+
+  A. Product Image Upload
+     - Admin uploads image from computer
+     - Backend receives file via multipart/form-data
+     - Saves to AWS S3 bucket or local /uploads/ folder
+     - Returns the image URL to store in product record
+
+  B. Dashboard Statistics API
+     GET /api/admin/dashboard/stats returns:
+     {
+       totalRevenue: 125000.00,
+       totalOrders: 47,
+       totalProducts: 60,
+       totalUsers: 120,
+       lowStockProducts: 5,
+       revenueByMonth: [...],
+       topSellingProducts: [...]
+     }
+
+  C. Order Status Update
+     - Admin changes order status in panel
+     - PUT /api/admin/orders/{id}/status called
+     - Status updated in database
+     - Email notification sent to customer automatically
+
+  D. Role Protection
+     - @PreAuthorize("hasRole('ADMIN')") annotation on all admin methods
+     - Any non-admin JWT token attempting admin endpoints gets 403 Forbidden
+
+
+================================================================================
+  12. PAYMENT GATEWAY INTEGRATION
+================================================================================
+
+Recommended for India: Razorpay
+Recommended for International: Stripe
+
+Razorpay Integration Flow:
+  1. Customer clicks "Place Order"
+  2. Frontend calls POST /api/payment/create-order
+  3. Backend creates a Razorpay Order ID using Razorpay Java SDK
+  4. Razorpay Order ID returned to frontend
+  5. Frontend opens Razorpay payment popup (using Razorpay JS SDK)
+  6. Customer enters card / UPI / net banking details
+  7. Payment processed by Razorpay
+  8. On success, Razorpay returns payment_id + signature
+  9. Frontend sends POST /api/payment/verify with payment_id + signature
+  10. Backend verifies the signature (HMAC SHA256) with Razorpay secret
+  11. If verified → order confirmed, stock reduced, email sent
+  12. If not verified → order failed, money auto-refunded by Razorpay
+
+Supported Payment Methods via Razorpay:
+  - Credit / Debit Cards (Visa, Mastercard, RuPay)
+  - UPI (Google Pay, PhonePe, Paytm, etc.)
+  - Net Banking (all major banks)
+  - EMI
+  - Wallets (Paytm, Amazon Pay)
+
+
+================================================================================
+  13. EMAIL SERVICE REQUIREMENTS
+================================================================================
+
+When to send emails:
+  - User registers → Welcome email
+  - User places order → Order confirmation with details
+  - Order status changes → "Your order has been shipped!" notification
+  - User requests password reset → Reset link email
+  - Order delivered → Request review email
+
+Technology Options:
+  Option 1: JavaMail + Gmail SMTP (free, for small scale)
+  Option 2: SendGrid API (professional, 100 emails/day free)
+  Option 3: Amazon SES (cheapest at scale, $0.10 per 1000 emails)
+
+Email Templates:
+  - HTML email templates (stored in src/main/resources/templates/)
+  - Use Thymeleaf template engine to inject dynamic data
+  - Example: Order Confirmation shows order ID, items, total, delivery address
+
+Order Confirmation Email Content:
+  Subject: Your SportZone order #ORD-1720000001 is confirmed!
+  Body:
+    - Order ID and date
+    - List of items ordered (with images)
+    - Delivery address
+    - Payment total
+    - Estimated delivery date
+    - "Track Order" button linking to website
+
+
+================================================================================
+  14. FILE / IMAGE UPLOAD REQUIREMENTS
+================================================================================
+
+Current Setup: Product images are Unsplash URLs (external links).
+
+Full Stack Setup: Admin uploads actual image files.
+
+Flow:
+  Admin selects image file → multipart/form-data POST to /api/admin/upload/image
+  Backend receives MultipartFile → saves to storage → returns URL
+
+Storage Options:
+
+  Option 1: AWS S3 (Recommended for production)
+    - Create S3 bucket in AWS console
+    - Configure bucket for public read access
+    - Use AWS SDK in Java to upload
+    - Image URL: https://sportzone-images.s3.ap-south-1.amazonaws.com/products/abc.jpg
+    - Cost: ~$0.023 per GB stored + $0.09 per GB transferred
+
+  Option 2: Local Server Storage (for development)
+    - Save files to /uploads/products/ folder on server
+    - Serve via Spring Boot static resource mapping
+    - Image URL: http://localhost:8080/uploads/products/abc.jpg
+    - NOT suitable for production (no CDN, no backup)
+
+  Option 3: Cloudinary (free tier available)
+    - Free: 25 credits/month (enough for development)
+    - Automatic image optimization and CDN delivery
+    - Java SDK available
+
+Validation:
+  - Max file size: 5MB
+  - Allowed types: jpg, jpeg, png, webp
+  - Auto-resize to product card dimensions (400x400 recommended)
+
+
+================================================================================
+  15. DEVELOPMENT TOOLS REQUIRED
+================================================================================
+
+FOR JAVA DEVELOPMENT:
+  IDE               : IntelliJ IDEA (Community free / Ultimate paid)
+                      OR Eclipse / VS Code with Java extensions
+  JDK               : Java Development Kit 17 or 21 (download from adoptium.net)
+  Maven             : Bundled with IntelliJ, or install separately
+  Spring Initializr : https://start.spring.io/ to generate project skeleton
+
+FOR DATABASE:
+  MySQL Server      : Download MySQL Community Server (free)
+  MySQL Workbench   : GUI tool to view and manage database tables
+  OR: DBeaver       : Free universal database GUI (works with MySQL, PostgreSQL)
+  OR: TablePlus     : Paid but excellent GUI for databases
+
+FOR API TESTING:
+  Postman           : Test all REST API endpoints before connecting frontend
+  OR: Thunder Client : Postman alternative inside VS Code
+
+FOR FRONTEND:
+  VS Code           : Already using for HTML/CSS/JS
+  Live Server       : Already using
+
+FOR VERSION CONTROL:
+  Git               : Track all code changes
+  GitHub            : Host project repository online
+
+OPTIONAL BUT USEFUL:
+  Docker            : Package backend + database into containers
+  Redis             : In-memory caching for cart, sessions (optional)
+
+
+================================================================================
+  16. DEPLOYMENT REQUIREMENTS
+================================================================================
+
+To make SportZone accessible to everyone on the internet:
+
+  BACKEND DEPLOYMENT OPTIONS:
+    Option 1: Railway.app       ← Free tier, easiest for beginners
+    Option 2: Heroku            ← Free tier removed, now paid (~$5/month)
+    Option 3: Render.com        ← Free tier available
+    Option 4: AWS EC2           ← Most control, used in industry (paid)
+    Option 5: DigitalOcean      ← $6/month droplet, great for small projects
+
+  DATABASE HOSTING:
+    Option 1: Railway MySQL     ← Free with Railway backend
+    Option 2: PlanetScale       ← Free MySQL hosting (5GB)
+    Option 3: AWS RDS           ← Industry standard (paid)
+    Option 4: Supabase          ← Free PostgreSQL
+
+  FRONTEND DEPLOYMENT:
+    Option 1: Netlify           ← Free, drag and drop HTML/CSS/JS
+    Option 2: Vercel            ← Free, great for static sites
+    Option 3: GitHub Pages      ← Free with GitHub account
+
+  DOMAIN NAME:
+    - Register a domain: sportzone.in (~₹800/year from GoDaddy/Namecheap)
+    - Connect to frontend (Netlify) and backend (Railway/Heroku)
+
+  SSL CERTIFICATE:
+    - HTTPS is required for payment gateways
+    - Let's Encrypt provides free SSL certificates
+    - Most hosting platforms (Netlify, Railway, Heroku) auto-provide SSL
+
+
+================================================================================
+  17. LEARNING PATH — TECHNOLOGIES TO LEARN
+================================================================================
+
+If you want to build this backend yourself, learn in this order:
+
+LEVEL 1 — JAVA BASICS (if not already known):
+  → Core Java (OOP, Collections, Exception Handling, Generics)
+  → Duration: 4–6 weeks
+
+LEVEL 2 — SPRING BOOT:
+  → Spring Core (IoC, Dependency Injection, Beans)
+  → Spring MVC (@RestController, @GetMapping, etc.)
+  → Spring Data JPA (Repositories, Entities, Relationships)
+  → application.properties configuration
+  → Duration: 4–6 weeks
+
+LEVEL 3 — DATABASE:
+  → SQL basics (SELECT, JOIN, INSERT, UPDATE, DELETE)
+  → MySQL setup and management
+  → JPA relationships (@OneToMany, @ManyToOne, @ManyToMany)
+  → Duration: 2–3 weeks
+
+LEVEL 4 — SECURITY:
+  → Spring Security concepts
+  → JWT (JSON Web Tokens) — generate, validate, refresh
+  → BCrypt password hashing
+  → Duration: 2–3 weeks
+
+LEVEL 5 — CONNECTING FRONTEND TO BACKEND:
+  → fetch() API in JavaScript
+  → Handling CORS (Cross-Origin Resource Sharing)
+  → Storing and sending JWT tokens
+  → Duration: 1–2 weeks
+
+LEVEL 6 — ADVANCED FEATURES:
+  → Razorpay payment integration
+  → Email with JavaMail
+  → File upload to S3
+  → Duration: 2–3 weeks
+
+TOTAL ESTIMATED LEARNING TIME: 3–5 months (with consistent daily practice)
+
+Good Free Learning Resources:
+  Java + Spring Boot : Spring official docs (spring.io/guides)
+  Java Full Stack    : Java Brains (YouTube), Telusko (YouTube)
+  MySQL              : W3Schools SQL Tutorial
+  JWT Security       : Amigoscode (YouTube) — "Spring Boot Security JWT"
+  Razorpay           : Razorpay official documentation (razorpay.com/docs)
+
+
+================================================================================
+  18. SUMMARY CHECKLIST
+================================================================================
+
+To convert SportZone from Frontend-Only to Java Full Stack:
+
+BACKEND SETUP:
+  [ ] Install Java 17/21, Maven, IntelliJ IDEA
+  [ ] Create Spring Boot project via start.spring.io
+  [ ] Add all required pom.xml dependencies
+  [ ] Configure application.properties (DB, JWT, Mail)
+
+DATABASE:
+  [ ] Install MySQL and create 'sportzone_db' database
+  [ ] Create all 13 tables with correct relationships
+  [ ] Seed initial product and category data
+
+ENTITY & REPOSITORY LAYER:
+  [ ] Create @Entity Java classes for all tables
+  [ ] Create JpaRepository interfaces for all entities
+
+SERVICE LAYER:
+  [ ] Implement business logic in @Service classes
+  [ ] Implement product CRUD, cart logic, order placement
+
+SECURITY:
+  [ ] Implement JWT token generation and validation
+  [ ] Configure Spring Security (permit public, protect private routes)
+  [ ] BCrypt password hashing on register
+
+REST API:
+  [ ] Implement all Controller classes
+  [ ] Create DTO classes for request and response
+  [ ] Add global exception handler
+  [ ] Add input validation on all request DTOs
+  [ ] Test all endpoints in Postman
+
+ADMIN FEATURES:
+  [ ] Implement all /api/admin/* endpoints
+  [ ] Add ROLE_ADMIN check on all admin endpoints
+  [ ] Implement image upload endpoint
+
+PAYMENTS:
+  [ ] Create Razorpay account (test mode)
+  [ ] Implement create-order and verify-payment endpoints
+  [ ] Test payment flow with Razorpay test cards
+
+EMAIL:
+  [ ] Configure Gmail SMTP or SendGrid
+  [ ] Create email templates for order confirmation, welcome, reset
+  [ ] Send emails on register, order placed, status change
+
+FRONTEND CHANGES:
+  [ ] Create api.js with all fetch() calls
+  [ ] Update login/register to call API and store JWT
+  [ ] Update cart to read from API instead of localStorage
+  [ ] Update orders/wishlist/account to use API
+  [ ] Handle 401 Unauthorized (auto logout + redirect to login)
+
+TESTING:
+  [ ] Test all API endpoints in Postman
+  [ ] Test full user journey (register → shop → checkout → order)
+  [ ] Test admin panel (add product → appears in store)
+  [ ] Test payment flow
+
+DEPLOYMENT:
+  [ ] Deploy backend to Railway / Render / Heroku
+  [ ] Deploy MySQL to Railway / PlanetScale
+  [ ] Update frontend API URL to production URL
+  [ ] Deploy frontend to Netlify / Vercel
+  [ ] Test everything on live URL
+  [ ] Setup custom domain + SSL
+
+
+================================================================================
+                    END OF DOCUMENT
+================================================================================
+
+File    : JAVA_FULLSTACK_REQUIREMENTS.txt
+Project : SportZone — Java Full Stack Backend Requirements
+Path    : C:\Users\mahi5\Documents\E-Commerce\JAVA_FULLSTACK_REQUIREMENTS.txt
+================================================================================
